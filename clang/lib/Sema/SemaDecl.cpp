@@ -1156,26 +1156,32 @@ Corrected:
       IsFunctionTemplate = true;
       Template = Context.getOverloadedTemplateName(Result.begin(),
                                                    Result.end());
-    } else if (!Result.empty()) {
-      auto *TD = cast<TemplateDecl>(getAsTemplateNameDecl(
-          *Result.begin(), /*AllowFunctionTemplates=*/true,
-          /*AllowDependent=*/false));
-      IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
-      IsVarTemplate = isa<VarTemplateDecl>(TD);
-
-      UsingShadowDecl *FoundUsingShadow =
-          dyn_cast<UsingShadowDecl>(*Result.begin());
-      assert(!FoundUsingShadow ||
-             TD == cast<TemplateDecl>(FoundUsingShadow->getTargetDecl()));
-      Template = Context.getQualifiedTemplateName(
-          SS.getScopeRep(),
-          /*TemplateKeyword=*/false,
-          FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
     } else {
-      // All results were non-template functions. This is a function template
-      // name.
-      IsFunctionTemplate = true;
-      Template = Context.getAssumedTemplateName(NameInfo.getName());
+      TemplateDecl *TD = nullptr;
+      if (!Result.empty()) {
+        TD = dyn_cast_or_null<TemplateDecl>(getAsTemplateNameDecl(
+            *Result.begin(), /*AllowFunctionTemplates=*/true,
+            /*AllowDependent=*/false));
+      }
+
+      if (TD) {
+        IsFunctionTemplate = isa<FunctionTemplateDecl>(TD);
+        IsVarTemplate = isa<VarTemplateDecl>(TD);
+
+        UsingShadowDecl *FoundUsingShadow =
+            dyn_cast<UsingShadowDecl>(*Result.begin());
+        assert(!FoundUsingShadow ||
+              TD == cast<TemplateDecl>(FoundUsingShadow->getTargetDecl()));
+        Template = Context.getQualifiedTemplateName(
+            SS.getScopeRep(),
+            /*TemplateKeyword=*/false,
+            FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
+      } else {
+        // All results were non-template functions. This is a function template
+        // name.
+        IsFunctionTemplate = true;
+        Template = Context.getAssumedTemplateName(NameInfo.getName());
+      }
     }
 
     if (IsFunctionTemplate) {
