@@ -1162,6 +1162,76 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
 
   // Check the type specifier components first. No checking for an invalid
   // type.
+  CheckTypeSpec(S, Policy);
+
+  // C++ [class.friend]p6:
+  //   No storage-class-specifier shall appear in the decl-specifier-seq
+  //   of a friend declaration.
+  if (isFriendSpecified() &&
+      (getStorageClassSpec() || getThreadStorageClassSpec())) {
+    SmallString<32> SpecName;
+    SourceLocation SCLoc;
+    FixItHint StorageHint, ThreadHint;
+
+    if (DeclSpec::SCS SC = getStorageClassSpec()) {
+      SpecName = getSpecifierName(SC);
+      SCLoc = getStorageClassSpecLoc();
+      StorageHint = FixItHint::CreateRemoval(SCLoc);
+    }
+
+    if (DeclSpec::TSCS TSC = getThreadStorageClassSpec()) {
+      if (!SpecName.empty())
+        SpecName += " ";
+      SpecName += getSpecifierName(TSC);
+      SCLoc = getThreadStorageClassSpecLoc();
+      ThreadHint = FixItHint::CreateRemoval(SCLoc);
+    }
+
+    S.Diag(SCLoc, diag::err_friend_decl_spec)
+        << SpecName << StorageHint << ThreadHint;
+
+    ClearStorageClassSpecs();
+  }
+
+  // C++11 [dcl.fct.spec]p5:
+  //   The virtual specifier shall be used only in the initial
+  //   declaration of a non-static class member function;
+  // C++11 [dcl.fct.spec]p6:
+  //   The explicit specifier shall be used only in the declaration of
+  //   a constructor or conversion function within its class
+  //   definition;
+  if (isFriendSpecified() && (isVirtualSpecified() || hasExplicitSpecifier())) {
+    StringRef Keyword;
+    FixItHint Hint;
+    SourceLocation SCLoc;
+
+    if (isVirtualSpecified()) {
+      Keyword = "virtual";
+      SCLoc = getVirtualSpecLoc();
+      Hint = FixItHint::CreateRemoval(SCLoc);
+    } else {
+      Keyword = "explicit";
+      SCLoc = getExplicitSpecLoc();
+      Hint = FixItHint::CreateRemoval(getExplicitSpecRange());
+    }
+
+    S.Diag(SCLoc, diag::err_friend_decl_spec) << Keyword << Hint;
+
+    FS_virtual_specified = false;
+    FS_explicit_specifier = ExplicitSpecifier();
+    FS_virtualLoc = FS_explicitLoc = SourceLocation();
+  }
+
+  assert(!TypeSpecOwned || isDeclRep((TST)TypeSpecType));
+
+  // Okay, now we can infer the real type.
+
+  // TODO: return "auto function" and other bad things based on the real type.
+
+  // 'data definition has no type or storage class'?
+}
+
+void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   if (TypeSpecType == TST_error)
     return;
 
@@ -1228,8 +1298,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
            (TypeSpecType != TST_int) && (TypeSpecType != TST_int128)) ||
           TypeAltiVecPixel) {
         S.Diag(TSTLoc, diag::err_invalid_vector_bool_decl_spec)
-          << (TypeAltiVecPixel ? "__pixel" :
-                                 getSpecifierName((TST)TypeSpecType, Policy));
+            << (TypeAltiVecPixel ? "__pixel"
+                                 : getSpecifierName((TST)TypeSpecType, Policy));
       }
       // vector bool __int128 requires Power10 (or ZVector).
       if ((TypeSpecType == TST_int128) &&
@@ -1345,10 +1415,8 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // use. Need information about the backend.
   if (TypeSpecComplex != TSC_unspecified) {
     if (TypeSpecType == TST_unspecified) {
-      S.Diag(TSCLoc, diag::ext_plain_complex)
-        << FixItHint::CreateInsertion(
-                              S.getLocForEndOfToken(getTypeSpecComplexLoc()),
-                                                 " double");
+      S.Diag(TSCLoc, diag::ext_plain_complex) << FixItHint::CreateInsertion(
+          S.getLocForEndOfToken(getTypeSpecComplexLoc()), " double");
       TypeSpecType = TST_double;   // _Complex -> _Complex double.
     } else if (TypeSpecType == TST_int || TypeSpecType == TST_char) {
       // Note that this intentionally doesn't include _Complex _Bool.
@@ -1378,14 +1446,14 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
       if (S.getSourceManager().isBeforeInTranslationUnit(
             getThreadStorageClassSpecLoc(), getStorageClassSpecLoc()))
         S.Diag(getStorageClassSpecLoc(),
-             diag::err_invalid_decl_spec_combination)
-          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
-          << SourceRange(getThreadStorageClassSpecLoc());
+               diag::err_invalid_decl_spec_combination)
+            << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+            << SourceRange(getThreadStorageClassSpecLoc());
       else
         S.Diag(getThreadStorageClassSpecLoc(),
-             diag::err_invalid_decl_spec_combination)
-          << DeclSpec::getSpecifierName(getStorageClassSpec())
-          << SourceRange(getStorageClassSpecLoc());
+               diag::err_invalid_decl_spec_combination)
+            << DeclSpec::getSpecifierName(getStorageClassSpec())
+            << SourceRange(getStorageClassSpecLoc());
       // Discard the thread storage class specifier to recover.
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
@@ -1441,71 +1509,6 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
-  // C++ [class.friend]p6:
-  //   No storage-class-specifier shall appear in the decl-specifier-seq
-  //   of a friend declaration.
-  if (isFriendSpecified() &&
-      (getStorageClassSpec() || getThreadStorageClassSpec())) {
-    SmallString<32> SpecName;
-    SourceLocation SCLoc;
-    FixItHint StorageHint, ThreadHint;
-
-    if (DeclSpec::SCS SC = getStorageClassSpec()) {
-      SpecName = getSpecifierName(SC);
-      SCLoc = getStorageClassSpecLoc();
-      StorageHint = FixItHint::CreateRemoval(SCLoc);
-    }
-
-    if (DeclSpec::TSCS TSC = getThreadStorageClassSpec()) {
-      if (!SpecName.empty()) SpecName += " ";
-      SpecName += getSpecifierName(TSC);
-      SCLoc = getThreadStorageClassSpecLoc();
-      ThreadHint = FixItHint::CreateRemoval(SCLoc);
-    }
-
-    S.Diag(SCLoc, diag::err_friend_decl_spec)
-      << SpecName << StorageHint << ThreadHint;
-
-    ClearStorageClassSpecs();
-  }
-
-  // C++11 [dcl.fct.spec]p5:
-  //   The virtual specifier shall be used only in the initial
-  //   declaration of a non-static class member function;
-  // C++11 [dcl.fct.spec]p6:
-  //   The explicit specifier shall be used only in the declaration of
-  //   a constructor or conversion function within its class
-  //   definition;
-  if (isFriendSpecified() && (isVirtualSpecified() || hasExplicitSpecifier())) {
-    StringRef Keyword;
-    FixItHint Hint;
-    SourceLocation SCLoc;
-
-    if (isVirtualSpecified()) {
-      Keyword = "virtual";
-      SCLoc = getVirtualSpecLoc();
-      Hint = FixItHint::CreateRemoval(SCLoc);
-    } else {
-      Keyword = "explicit";
-      SCLoc = getExplicitSpecLoc();
-      Hint = FixItHint::CreateRemoval(getExplicitSpecRange());
-    }
-
-    S.Diag(SCLoc, diag::err_friend_decl_spec)
-      << Keyword << Hint;
-
-    FS_virtual_specified = false;
-    FS_explicit_specifier = ExplicitSpecifier();
-    FS_virtualLoc = FS_explicitLoc = SourceLocation();
-  }
-
-  assert(!TypeSpecOwned || isDeclRep((TST) TypeSpecType));
-
-  // Okay, now we can infer the real type.
-
-  // TODO: return "auto function" and other bad things based on the real type.
-
-  // 'data definition has no type or storage class'?
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {
