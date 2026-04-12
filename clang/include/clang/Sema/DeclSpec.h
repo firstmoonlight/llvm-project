@@ -890,6 +890,8 @@ public:
 
   void CheckTypeSpec(Sema &S, const PrintingPolicy &Policy);
 
+  void CheckFriendSpec(Sema &S, const PrintingPolicy &Policy);
+
   const WrittenBuiltinSpecs& getWrittenBuiltinSpecs() const {
     return writtenBS;
   }

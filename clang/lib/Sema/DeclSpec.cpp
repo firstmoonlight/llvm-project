@@ -1164,63 +1164,7 @@ void DeclSpec::Finish(Sema &S, const PrintingPolicy &Policy) {
   // type.
   CheckTypeSpec(S, Policy);
 
-  // C++ [class.friend]p6:
-  //   No storage-class-specifier shall appear in the decl-specifier-seq
-  //   of a friend declaration.
-  if (isFriendSpecified() &&
-      (getStorageClassSpec() || getThreadStorageClassSpec())) {
-    SmallString<32> SpecName;
-    SourceLocation SCLoc;
-    FixItHint StorageHint, ThreadHint;
-
-    if (DeclSpec::SCS SC = getStorageClassSpec()) {
-      SpecName = getSpecifierName(SC);
-      SCLoc = getStorageClassSpecLoc();
-      StorageHint = FixItHint::CreateRemoval(SCLoc);
-    }
-
-    if (DeclSpec::TSCS TSC = getThreadStorageClassSpec()) {
-      if (!SpecName.empty())
-        SpecName += " ";
-      SpecName += getSpecifierName(TSC);
-      SCLoc = getThreadStorageClassSpecLoc();
-      ThreadHint = FixItHint::CreateRemoval(SCLoc);
-    }
-
-    S.Diag(SCLoc, diag::err_friend_decl_spec)
-        << SpecName << StorageHint << ThreadHint;
-
-    ClearStorageClassSpecs();
-  }
-
-  // C++11 [dcl.fct.spec]p5:
-  //   The virtual specifier shall be used only in the initial
-  //   declaration of a non-static class member function;
-  // C++11 [dcl.fct.spec]p6:
-  //   The explicit specifier shall be used only in the declaration of
-  //   a constructor or conversion function within its class
-  //   definition;
-  if (isFriendSpecified() && (isVirtualSpecified() || hasExplicitSpecifier())) {
-    StringRef Keyword;
-    FixItHint Hint;
-    SourceLocation SCLoc;
-
-    if (isVirtualSpecified()) {
-      Keyword = "virtual";
-      SCLoc = getVirtualSpecLoc();
-      Hint = FixItHint::CreateRemoval(SCLoc);
-    } else {
-      Keyword = "explicit";
-      SCLoc = getExplicitSpecLoc();
-      Hint = FixItHint::CreateRemoval(getExplicitSpecRange());
-    }
-
-    S.Diag(SCLoc, diag::err_friend_decl_spec) << Keyword << Hint;
-
-    FS_virtual_specified = false;
-    FS_explicit_specifier = ExplicitSpecifier();
-    FS_virtualLoc = FS_explicitLoc = SourceLocation();
-  }
+  CheckFriendSpec(S, Policy);
 
   assert(!TypeSpecOwned || isDeclRep((TST)TypeSpecType));
 
@@ -1509,6 +1453,66 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_consteval);
   else if (getConstexprSpecifier() == ConstexprSpecKind::Constinit)
     S.Diag(ConstexprLoc, diag::warn_cxx20_compat_constinit);
+}
+
+void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
+  // C++ [class.friend]p6:
+  //   No storage-class-specifier shall appear in the decl-specifier-seq
+  //   of a friend declaration.
+  if (isFriendSpecified() &&
+      (getStorageClassSpec() || getThreadStorageClassSpec())) {
+    SmallString<32> SpecName;
+    SourceLocation SCLoc;
+    FixItHint StorageHint, ThreadHint;
+
+    if (DeclSpec::SCS SC = getStorageClassSpec()) {
+      SpecName = getSpecifierName(SC);
+      SCLoc = getStorageClassSpecLoc();
+      StorageHint = FixItHint::CreateRemoval(SCLoc);
+    }
+
+    if (DeclSpec::TSCS TSC = getThreadStorageClassSpec()) {
+      if (!SpecName.empty())
+        SpecName += " ";
+      SpecName += getSpecifierName(TSC);
+      SCLoc = getThreadStorageClassSpecLoc();
+      ThreadHint = FixItHint::CreateRemoval(SCLoc);
+    }
+
+    S.Diag(SCLoc, diag::err_friend_decl_spec)
+        << SpecName << StorageHint << ThreadHint;
+
+    ClearStorageClassSpecs();
+  }
+
+  // C++11 [dcl.fct.spec]p5:
+  //   The virtual specifier shall be used only in the initial
+  //   declaration of a non-static class member function;
+  // C++11 [dcl.fct.spec]p6:
+  //   The explicit specifier shall be used only in the declaration of
+  //   a constructor or conversion function within its class
+  //   definition;
+  if (isFriendSpecified() && (isVirtualSpecified() || hasExplicitSpecifier())) {
+    StringRef Keyword;
+    FixItHint Hint;
+    SourceLocation SCLoc;
+
+    if (isVirtualSpecified()) {
+      Keyword = "virtual";
+      SCLoc = getVirtualSpecLoc();
+      Hint = FixItHint::CreateRemoval(SCLoc);
+    } else {
+      Keyword = "explicit";
+      SCLoc = getExplicitSpecLoc();
+      Hint = FixItHint::CreateRemoval(getExplicitSpecRange());
+    }
+
+    S.Diag(SCLoc, diag::err_friend_decl_spec) << Keyword << Hint;
+
+    FS_virtual_specified = false;
+    FS_explicit_specifier = ExplicitSpecifier();
+    FS_virtualLoc = FS_explicitLoc = SourceLocation();
+  }
 }
 
 bool DeclSpec::isMissingDeclaratorOk() {
