@@ -5,6 +5,8 @@
 // from dependent and non-dependent base classes does not cause name lookup
 // to crash when a dependent entity cannot be converted to a TemplateDecl.
 
+namespace GH174951 {
+
 template<typename A>
 class X {
 public:
@@ -31,3 +33,5 @@ public:
         execute(42);
     }
 };
+
+} // namespace GH174951
