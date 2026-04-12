@@ -391,6 +391,7 @@ Bug Fixes to C++ Support
 - Fixed an incorrect template argument deduction when matching packs of template
   template parameters when one of its parameters is also a pack. (#GH181166)
 - Fixed a crash when a default argument is passed to an explicit object parameter. (#GH176639)
+- Fixed a crash when parsing `using` declaration with multiple overloaded functions. (#GH174951)
 - Fixed an alias template CTAD crash.
 - Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 - Fixed a crash when instantiating an invalid out-of-line static data member definition in a local class. (#GH176152)
@@ -411,6 +412,7 @@ Bug Fixes to C++ Support
 - Fix an error using an initializer list with array new for a type that is not default-constructible. (#GH81157)
 - We no longer consider conversion operators when copy-initializing from the same type. This was non
   conforming and could lead to recursive constraint satisfaction checking. (#GH149443)
+- 
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
