@@ -1514,7 +1514,8 @@ Sema::ActOnCXXTypeConstructExpr(ParsedType TypeRep,
                                           RParenOrBraceLoc, ListInitialization);
   if (Result.isInvalid())
     Result = CreateRecoveryExpr(TInfo->getTypeLoc().getBeginLoc(),
-                                RParenOrBraceLoc, exprs, Ty);
+                                RParenOrBraceLoc, exprs, Ty->isIncompleteType() ? QualType() : Ty);
+
   return Result;
 }
 

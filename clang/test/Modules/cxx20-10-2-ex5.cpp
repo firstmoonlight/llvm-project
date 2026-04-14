@@ -61,6 +61,5 @@ int main() {
   auto f = rootFinder(2); // OK
                           // error: A is incomplete
   return A{45}.value;     // expected-error {{invalid use of incomplete type 'A'}}
-                          // expected-error@-1 {{member access into incomplete type 'A'}}
-                          // expected-note@std-10-2-ex5-tu1.cpp:12 2{{forward declaration of 'A'}}
+                          // expected-note@std-10-2-ex5-tu1.cpp:12 {{forward declaration of 'A'}}
 }
