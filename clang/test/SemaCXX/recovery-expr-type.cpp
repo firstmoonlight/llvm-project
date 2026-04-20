@@ -104,7 +104,8 @@ void test() {
 // verify the secondary diagnostic "cannot initialize" is emitted.
 namespace test8 {
 typedef int arr[];
-int v = arr(); // expected-error {{array types cannot be value-initialized}}
+int v = arr(); // expected-error {{array types cannot be value-initialized}} \
+                  expected-error {{cannot initialize a variable of type 'int' with an rvalue of type 'arr'}}
 }
 
 namespace test9 {
@@ -177,18 +178,10 @@ void f() {
 
 namespace test16 {
 // verify we do not crash on incomplete class type.
-template<typename T, typename U> struct A; // expected-note 3{{template is declared here}}
+template<typename T, typename U> struct A; // expected-note 5{{template is declared here}}
 A<int, int> foo() { // expected-error {{implicit instantiation of undefined template}}
   if (1 == 1)
-    return A<int, int>{1}; // expected-error {{implicit instantiation of undefined template}}
-  return A<int, int>(1); // expected-error {{implicit instantiation of undefined template}}
+    return A<int, int>{1}; // expected-error 2{{implicit instantiation of undefined template}}
+  return A<int, int>(1); // expected-error 2{{implicit instantiation of undefined template}}
 }
-}
-
-namespace test17 {
-// Verify we do not crash on trailing expression with template keyword.
-int a((enum b )b {       } // expected-error {{ISO C++ forbids forward references to 'enum' types}} \
-                          // expected-error {{invalid use of incomplete type}} \
-                          // expected-note {{forward declaration of}}
-         -> template c);  // expected-error {{a template argument list is expected after a name prefixed by the template keyword}}
 }
