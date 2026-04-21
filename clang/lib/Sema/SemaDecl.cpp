@@ -1177,8 +1177,8 @@ Corrected:
             /*TemplateKeyword=*/false,
             FoundUsingShadow ? TemplateName(FoundUsingShadow) : TemplateName(TD));
       } else {
-        // All results were non-template functions. This is a function template
-        // name.
+        // No template declaration found. This could be an ordinary non-template
+        // function or an UnresolvedUsingValueDecl.
         IsFunctionTemplate = true;
         Template = Context.getAssumedTemplateName(NameInfo.getName());
       }
