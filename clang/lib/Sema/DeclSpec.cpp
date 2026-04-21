@@ -1242,8 +1242,8 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
            (TypeSpecType != TST_int) && (TypeSpecType != TST_int128)) ||
           TypeAltiVecPixel) {
         S.Diag(TSTLoc, diag::err_invalid_vector_bool_decl_spec)
-            << (TypeAltiVecPixel ? "__pixel"
-                                 : getSpecifierName((TST)TypeSpecType, Policy));
+          << (TypeAltiVecPixel ? "__pixel" :
+                                 getSpecifierName((TST)TypeSpecType, Policy));
       }
       // vector bool __int128 requires Power10 (or ZVector).
       if ((TypeSpecType == TST_int128) &&
@@ -1359,8 +1359,10 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
   // use. Need information about the backend.
   if (TypeSpecComplex != TSC_unspecified) {
     if (TypeSpecType == TST_unspecified) {
-      S.Diag(TSCLoc, diag::ext_plain_complex) << FixItHint::CreateInsertion(
-          S.getLocForEndOfToken(getTypeSpecComplexLoc()), " double");
+      S.Diag(TSCLoc, diag::ext_plain_complex)
+        << FixItHint::CreateInsertion(
+                              S.getLocForEndOfToken(getTypeSpecComplexLoc()),
+                                                 " double");
       TypeSpecType = TST_double;   // _Complex -> _Complex double.
     } else if (TypeSpecType == TST_int || TypeSpecType == TST_char) {
       // Note that this intentionally doesn't include _Complex _Bool.
@@ -1390,14 +1392,14 @@ void DeclSpec::CheckTypeSpec(Sema &S, const PrintingPolicy &Policy) {
       if (S.getSourceManager().isBeforeInTranslationUnit(
             getThreadStorageClassSpecLoc(), getStorageClassSpecLoc()))
         S.Diag(getStorageClassSpecLoc(),
-               diag::err_invalid_decl_spec_combination)
-            << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
-            << SourceRange(getThreadStorageClassSpecLoc());
+             diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getThreadStorageClassSpec())
+          << SourceRange(getThreadStorageClassSpecLoc());
       else
         S.Diag(getThreadStorageClassSpecLoc(),
-               diag::err_invalid_decl_spec_combination)
-            << DeclSpec::getSpecifierName(getStorageClassSpec())
-            << SourceRange(getStorageClassSpecLoc());
+             diag::err_invalid_decl_spec_combination)
+          << DeclSpec::getSpecifierName(getStorageClassSpec())
+          << SourceRange(getStorageClassSpecLoc());
       // Discard the thread storage class specifier to recover.
       ThreadStorageClassSpec = TSCS_unspecified;
       ThreadStorageClassSpecLoc = SourceLocation();
@@ -1472,15 +1474,14 @@ void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
     }
 
     if (DeclSpec::TSCS TSC = getThreadStorageClassSpec()) {
-      if (!SpecName.empty())
-        SpecName += " ";
+      if (!SpecName.empty()) SpecName += " ";
       SpecName += getSpecifierName(TSC);
       SCLoc = getThreadStorageClassSpecLoc();
       ThreadHint = FixItHint::CreateRemoval(SCLoc);
     }
 
     S.Diag(SCLoc, diag::err_friend_decl_spec)
-        << SpecName << StorageHint << ThreadHint;
+      << SpecName << StorageHint << ThreadHint;
 
     ClearStorageClassSpecs();
   }
@@ -1507,7 +1508,8 @@ void DeclSpec::CheckFriendSpec(Sema &S, const PrintingPolicy &Policy) {
       Hint = FixItHint::CreateRemoval(getExplicitSpecRange());
     }
 
-    S.Diag(SCLoc, diag::err_friend_decl_spec) << Keyword << Hint;
+    S.Diag(SCLoc, diag::err_friend_decl_spec)
+      << Keyword << Hint;
 
     FS_virtual_specified = false;
     FS_explicit_specifier = ExplicitSpecifier();
